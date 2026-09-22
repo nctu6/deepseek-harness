@@ -55,6 +55,8 @@ export interface Config {
   surfaceContext: boolean
   /** Explicit `--trusted-host` authorities from this invocation. */
   trustedHosts: string[]
+  /** Opt-in: non-loopback browsers may persist Host settings. */
+  allowRemoteSettings: boolean
 }
 
 export const Config: z<Config> = z.object({
@@ -62,6 +64,7 @@ export const Config: z<Config> = z.object({
   printUrl: z.boolean().default(true),
   surfaceContext: z.boolean().default(true),
   trustedHosts: z.array(String).default([]),
+  allowRemoteSettings: z.boolean().default(false),
 })
 
 /** Bind-dependent Web values shared by the trust fence and URL display. */
@@ -229,6 +232,11 @@ export function apply(ctx: Context, config: Config): void {
   const handoffBrowser = config.openBrowser && !launchedThroughSsh(launchEnvironmentOf(ctx))
   // Release dependent rows only after bind-dependent trust has been sampled once.
   ctx.provide(WEB_RUNTIME_SERVICE, runtime)
+  if (config.allowRemoteSettings) {
+    ctx.on('webserver/index-inject', (table) => {
+      table.push({ kind: 'global', name: '__DSH_ALLOW_REMOTE_SETTINGS__', value: true })
+    })
+  }
   ctx.plugin(FrontendStatic, { distIndex: internals.resolveDistIndex() })
   if (config.surfaceContext) {
     ctx.inject(['systemPrompt'], (promptCtx) => {

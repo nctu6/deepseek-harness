@@ -110,6 +110,8 @@ export interface ClientTransportHooks {
 interface ClientTransportGlobal {
   __DSH_TRANSPORT__?: ClientTransportHooks
   __DSH_CONNECTION_RECOVERY__?: unknown
+  /** Opt-in from `dsh web --allow-remote-settings`; elevates Host settings on non-loopback pages. */
+  __DSH_ALLOW_REMOTE_SETTINGS__?: unknown
 }
 
 /** Browser location fields used to classify loopback authority. */
@@ -245,7 +247,10 @@ export function installConnection(ctx: Context, options: ConnectionInstallOption
     publishState(undefined)
   }
   const handle: ConnectionHandle = {
-    isLoopback: transport?.ownsHost === true || pageLocation === undefined || isLoopbackHostname(pageLocation.hostname),
+    isLoopback: transport?.ownsHost === true
+      || pageLocation === undefined
+      || isLoopbackHostname(pageLocation.hostname)
+      || (globalThis as ClientTransportGlobal).__DSH_ALLOW_REMOTE_SETTINGS__ === true,
     generation: {
       getSnapshot: () => generation,
       subscribe: (listener) => {
